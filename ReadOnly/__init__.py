@@ -1,10 +1,13 @@
-from unrealsdk import *
-from ..ModManager import BL2MOD, RegisterMod
+import unrealsdk
 import math
-
-class ReadOnly(BL2MOD):
+from unrealsdk import *
+from Mods import ModMenu
+   
+class MyMod(ModMenu.SDKMod):
     Name = "Borderlands Easy Read Only"
     Description = "Toggle Read Only on a button press"
+    SaveEnabledState: ModMenu.EnabledSaveType = ModMenu.EnabledSaveType.LoadOnMainMenu
+
     readOnly = False
     toggledReadOnly = False
 
@@ -33,6 +36,7 @@ class ReadOnly(BL2MOD):
             self.displayFeedback()
 
     def Enable(self):
+        super().Enable()
 
         def hookCanSaveGame(caller: UObject, function: UFunction, params: FStruct) -> bool:
             if self.readOnly:
@@ -48,8 +52,25 @@ class ReadOnly(BL2MOD):
         RegisterHook("WillowGame.WillowHUD.CreateWeaponScopeMovie", "HookTrainingText", hookTrainingText)
 
     def Disable(self):
+        super().Disable()
+
         RemoveHook("WillowGame.WillowPlayerController.CanSaveGame", "HookSaveGame")
         RemoveHook("WillowGame.WillowHUDGFxMovie.DrawTrainingText", "HookTrainingText")
         RemoveHook("WillowGame.WillowHUD.CreateWeaponScopeMovie", "HookTrainingText")
+        
+instance = MyMod()
+   
+if __name__ == "__main__":
+    unrealsdk.Log(f"[{instance.Name}] Manually loaded")
+    for mod in ModMenu.Mods:
+        if mod.Name == instance.Name:
+            if mod.IsEnabled:
+                mod.Disable()
+            ModMenu.Mods.remove(mod)
+            unrealsdk.Log(f"[{instance.Name}] Removed last instance")
 
-RegisterMod(ReadOnly())
+            # Fixes inspect.getfile()
+            instance.__class__.__module__ = mod.__class__.__module__
+            break
+
+ModMenu.RegisterMod(instance)
